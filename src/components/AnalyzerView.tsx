@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../store';
 import { cleanTrackers, applyRules, isSuspicious, isHomograph, scanThreats, TRACKING_PARAMS } from '../utils';
-import { ShieldAlert, Sparkles, Copy, QrCode, Bookmark, X, RefreshCcw, Undo2, Redo2, Loader2, ArrowRight, AlertTriangle, Info } from 'lucide-react';
+import { ShieldAlert, Sparkles, Copy, QrCode, Bookmark, X, RefreshCcw, Undo2, Redo2, Loader2, ArrowRight, AlertTriangle, Info, Brain } from 'lucide-react';
 import QRModal from './QRModal';
 import ReactMarkdown from 'react-markdown';
+import { analyzeUrlWithAI } from '../aiService';
 
 export default function AnalyzerView() {
   const { 
     urlInput, setUrlInput, 
     pushUrlHistory, undoUrl, redoUrl, historyIndex, urlHistory,
     rules, saveLog,
-    threatConfigs, addSecurityAlert, securityAlerts, dismissSecurityAlert
+    threatConfigs, addSecurityAlert, securityAlerts, dismissSecurityAlert,
+    aiConfig
   } = useAppStore();
 
   const [parsedUrl, setParsedUrl] = useState<URL | null>(null);
@@ -101,19 +103,26 @@ export default function AnalyzerView() {
     setAuditResult('');
     
     try {
-      const res = await fetch('/api/audit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: urlInput })
-      });
-      const data = await res.json();
-      if (data.error) {
-        setAuditError(data.error);
+      if (aiConfig.enabled && aiConfig.apiKey) {
+        // Run completely client-side (100% serverless / GitHub Pages compatible)
+        const result = await analyzeUrlWithAI(urlInput, aiConfig);
+        setAuditResult(result);
       } else {
-        setAuditResult(data.result);
+        // Fallback to Express backend proxy if running locally/fullstack
+        const res = await fetch('/api/audit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: urlInput })
+        });
+        const data = await res.json();
+        if (data.error) {
+          setAuditError(data.error + '. Nota: Pode configurar um Provedor de IA próprio na aba "Alertas e Configs" para processamento local direto.');
+        } else {
+          setAuditResult(data.result);
+        }
       }
-    } catch (e) {
-      setAuditError('Falha ao conectar com o servidor.');
+    } catch (e: any) {
+      setAuditError(e.message || 'Falha ao realizar a auditoria de IA.');
     } finally {
       setIsAuditing(false);
     }
@@ -294,11 +303,22 @@ export default function AnalyzerView() {
         {/* AI Audit Section */}
         <div className="lg:col-span-8 lg:row-span-2 bg-[#0f111a] border border-slate-800/60 rounded-3xl p-6 flex flex-col">
            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xs font-bold text-indigo-400 uppercase tracking-[0.2em]">Auditoria de IA</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xs font-bold text-indigo-400 uppercase tracking-[0.2em]">Auditoria de IA</h2>
+                {aiConfig.enabled && aiConfig.apiKey ? (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 capitalize flex items-center gap-1">
+                    <Brain className="w-3 h-3 text-emerald-400 animate-pulse" /> IA do Navegador ({aiConfig.provider})
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-500/10 text-slate-400 border border-slate-500/20">
+                    Servidor (Padrão)
+                  </span>
+                )}
+              </div>
               <button 
                 onClick={runAudit} 
                 disabled={isAuditing}
-                className="py-1.5 px-3 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 disabled:opacity-50 text-indigo-400 font-semibold rounded-lg text-xs flex items-center gap-2 transition"
+                className="py-1.5 px-3 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 disabled:opacity-50 text-indigo-400 font-semibold rounded-lg text-xs flex items-center gap-2 transition cursor-pointer"
               >
                 {isAuditing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldAlert className="w-3.5 h-3.5" />}
                 <span>{isAuditing ? 'Analisando...' : 'Iniciar Análise'}</span>

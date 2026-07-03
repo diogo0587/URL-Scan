@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Rule, SavedLog, ThreatConfig, SecurityAlert } from './types';
+import { Rule, SavedLog, ThreatConfig, SecurityAlert, AIProviderConfig } from './types';
 
 interface AppState {
   activeView: 'analyzer' | 'rules' | 'history' | 'settings';
@@ -32,6 +32,9 @@ interface AppState {
   addSecurityAlert: (alert: Omit<SecurityAlert, 'id' | 'timestamp' | 'dismissed'>) => void;
   dismissSecurityAlert: (id: string) => void;
   clearSecurityAlerts: () => void;
+
+  aiConfig: AIProviderConfig;
+  updateAiConfig: (updates: Partial<AIProviderConfig>) => void;
 }
 
 const DEFAULT_RULES: Rule[] = [
@@ -118,7 +121,18 @@ export const useAppStore = create<AppState>()(
       dismissSecurityAlert: (id) => set((state) => ({
         securityAlerts: state.securityAlerts.map(a => a.id === id ? { ...a, dismissed: true } : a)
       })),
-      clearSecurityAlerts: () => set({ securityAlerts: [] })
+      clearSecurityAlerts: () => set({ securityAlerts: [] }),
+
+      aiConfig: {
+        provider: 'openai',
+        apiKey: '',
+        apiEndpoint: 'https://api.openai.com/v1',
+        model: 'gpt-4o-mini',
+        enabled: false
+      },
+      updateAiConfig: (updates) => set((state) => ({
+        aiConfig: { ...state.aiConfig, ...updates }
+      }))
     }),
     {
       name: 'urlguard-storage',
@@ -126,7 +140,8 @@ export const useAppStore = create<AppState>()(
         rules: state.rules,
         savedLogs: state.savedLogs,
         threatConfigs: state.threatConfigs,
-        securityAlerts: state.securityAlerts
+        securityAlerts: state.securityAlerts,
+        aiConfig: state.aiConfig
       }),
     }
   )

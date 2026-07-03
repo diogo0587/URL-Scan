@@ -3,15 +3,18 @@ import { useAppStore } from '../store';
 import { ThreatConfig, Rule } from '../types';
 import { 
   Bell, Shield, AlertTriangle, CheckCircle2, Trash2, 
-  Wand2, Plus, Check, Play, Info, Eye, ShieldAlert, Sparkles, RefreshCw
+  Wand2, Plus, Check, Play, Info, Eye, ShieldAlert, Sparkles, RefreshCw,
+  Brain, Key, Globe, EyeOff, Cpu
 } from 'lucide-react';
 
 export default function SettingsView() {
   const { 
     threatConfigs, updateThreatConfig, 
     securityAlerts, dismissSecurityAlert, clearSecurityAlerts,
-    addRule, setActiveView
+    addRule, setActiveView, aiConfig, updateAiConfig
   } = useAppStore();
+
+  const [showApiKey, setShowApiKey] = useState(false);
 
   // Regex Builder State
   const [builderType, setBuilderType] = useState<'redirect' | 'param' | 'bypass'>('redirect');
@@ -111,6 +114,32 @@ export default function SettingsView() {
             {activeAlerts.length}
           </span>
         </div>
+      </div>
+
+      {/* GitHub Pages Tutorial Banner */}
+      <div className="bg-indigo-950/20 border border-indigo-500/20 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 tracking-wide uppercase">
+            Guia de Implantação
+          </span>
+          <h3 className="text-sm font-bold text-white flex items-center gap-1.5 mt-1">
+            Como publicar este URLGuard no GitHub Pages grátis?
+          </h3>
+          <p className="text-xs text-slate-400 leading-relaxed max-w-3xl">
+            Toda a lógica de higienização de URLs, regras customizadas e inteligência artificial do app corre **100% no navegador**. Para hospedar de graça no GitHub Pages:
+            <span className="block mt-1 font-mono text-[11px] text-indigo-300">
+              1. Exporte o projeto (como ZIP ou GitHub pelo menu superior) ➔ 2. Faça o upload para o GitHub ➔ 3. Ative o GitHub Pages nas Definições do repositório apontando para a pasta <code className="bg-slate-900 px-1 py-0.5 rounded text-white">dist/</code> com a sua build!
+            </span>
+          </p>
+        </div>
+        <a 
+          href="https://pages.github.com" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="shrink-0 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/10 hover:shadow-indigo-600/20 transition flex items-center gap-1 cursor-pointer"
+        >
+          <Globe className="w-3.5 h-3.5" /> Abrir GitHub Pages
+        </a>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -455,6 +484,138 @@ export default function SettingsView() {
             </div>
 
           </div>
+
+          {/* AI Provider Config */}
+          <div className="bg-gradient-to-b from-[#111322] to-[#0f111a] border border-indigo-500/15 rounded-3xl p-6 shadow-2xl space-y-5 mt-6">
+            <div className="space-y-1">
+              <h2 className="text-xs font-bold text-indigo-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                <Brain className="w-4 h-4 text-indigo-400" /> Provedor de Inteligência Artificial (IA)
+              </h2>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Configure um provedor de IA para habilitar a Análise Inteligente de URLs diretamente no seu navegador.
+              </p>
+            </div>
+
+            {/* Provider selector */}
+            <div className="grid grid-cols-4 gap-1.5 bg-[#05060a] p-1 rounded-xl border border-slate-800/80">
+              {(['gemini', 'openai', 'openrouter', 'custom'] as const).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => {
+                    const defaultEp = p === 'gemini' ? 'https://generativelanguage.googleapis.com/v1beta/models' :
+                                      p === 'openai' ? 'https://api.openai.com/v1' :
+                                      p === 'openrouter' ? 'https://openrouter.ai/api/v1' : '';
+                    const defaultModel = p === 'gemini' ? 'gemini-2.5-flash' :
+                                         p === 'openai' ? 'gpt-4o-mini' :
+                                         p === 'openrouter' ? 'google/gemini-2.5-flash' : '';
+                    updateAiConfig({
+                      provider: p,
+                      apiEndpoint: defaultEp,
+                      model: defaultModel
+                    });
+                  }}
+                  className={`py-1.5 text-[10px] font-bold rounded-lg transition-colors capitalize ${
+                    aiConfig.provider === p ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+
+            {/* Input fields */}
+            <div className="space-y-4">
+              {/* API Key */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                  <Key className="w-3.5 h-3.5" /> Chave de API (API Key)
+                </label>
+                <div className="relative">
+                  <input 
+                    type={showApiKey ? "text" : "password"} 
+                    value={aiConfig.apiKey}
+                    onChange={(e) => updateAiConfig({ apiKey: e.target.value })}
+                    className="w-full bg-[#05060a] border border-slate-800 rounded-xl pl-4 pr-10 py-2.5 text-xs text-indigo-300 outline-none focus:border-indigo-500/50 font-mono"
+                    placeholder={
+                      aiConfig.provider === 'gemini' ? 'AIzaSy...' :
+                      aiConfig.provider === 'openai' ? 'sk-...' :
+                      aiConfig.provider === 'openrouter' ? 'sk-or-v1-...' : 'Insira a chave do provedor'
+                    }
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKey(!showApiKey)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition p-1"
+                  >
+                    {showApiKey ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* API Endpoint & Model (conditional/editable) */}
+              <div className="grid grid-cols-1 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                    <Globe className="w-3.5 h-3.5" /> Endpoint API
+                  </label>
+                  <input 
+                    type="text" 
+                    value={aiConfig.apiEndpoint}
+                    onChange={(e) => updateAiConfig({ apiEndpoint: e.target.value })}
+                    className="w-full bg-[#05060a] border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-indigo-300 outline-none focus:border-indigo-500/50 font-mono"
+                    placeholder="https://api..."
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                    <Cpu className="w-3.5 h-3.5" /> Nome do Modelo
+                  </label>
+                  <input 
+                    type="text" 
+                    value={aiConfig.model}
+                    onChange={(e) => updateAiConfig({ model: e.target.value })}
+                    className="w-full bg-[#05060a] border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-indigo-300 outline-none focus:border-indigo-500/50 font-mono"
+                    placeholder="gpt-4o-mini"
+                  />
+                </div>
+              </div>
+
+              {/* Enabled Switch */}
+              <div className="flex items-center justify-between bg-[#05060a]/50 p-3 rounded-2xl border border-slate-800/50">
+                <div className="space-y-0.5">
+                  <span className="text-xs font-semibold text-white">Ativar Análise Avançada por IA</span>
+                  <p className="text-[10px] text-slate-500">Habilita o botão de auditoria inteligente na aba principal.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => updateAiConfig({ enabled: !aiConfig.enabled })}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    aiConfig.enabled ? 'bg-indigo-600' : 'bg-slate-800'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      aiConfig.enabled ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+            </div>
+
+            {/* GitHub Pages Readiness Indicator */}
+            <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-2xl p-4 space-y-1.5 text-[11px] leading-relaxed text-emerald-400">
+              <span className="font-bold flex items-center gap-1">
+                <Check className="w-3.5 h-3.5 text-emerald-400" /> Compatível com GitHub Pages (100% Serverless)
+              </span>
+              <p className="text-slate-400 text-[10px] leading-normal">
+                Esta aplicação foi desenhada para correr de forma totalmente estática e independente. Toda a lógica de higienização de URLs, regras regex, e as requisições de Inteligência Artificial ocorrem **diretamente no seu navegador** via chamadas assíncronas seguras, sem depender de nenhum servidor intermediário próprio. Suas chaves de API nunca saem do seu cliente local.
+              </p>
+            </div>
+          </div>
+
         </div>
 
       </div>

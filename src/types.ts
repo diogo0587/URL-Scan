@@ -32,3 +32,14 @@ export interface SecurityAlert {
   timestamp: number;
   dismissed: boolean;
 }
+
+export type AIProvider = 'gemini' | 'openai' | 'openrouter' | 'custom';
+
+export interface AIProviderConfig {
+  provider: AIProvider;
+  apiKey: string;
+  apiEndpoint: string;
+  model: string;
+  enabled: boolean;
+}
+
