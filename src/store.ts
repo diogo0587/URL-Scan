@@ -35,12 +35,17 @@ interface AppState {
 
   aiConfig: AIProviderConfig;
   updateAiConfig: (updates: Partial<AIProviderConfig>) => void;
+
+  resetToDefaults: () => void;
 }
 
 const DEFAULT_RULES: Rule[] = [
   { id: '1', name: 'Twitter ➔ FxTwitter', active: true, regex: '^https?:\\\\/\\\\/(?:[a-z0-9-]+\\\\.)?(?:twitter|x)\\\\.com\\\\/(\\\\w+\\\\/status\\\\/\\\\d+)', replacement: 'https://fxtwitter.com/$1' },
   { id: '2', name: 'TikTok ➔ VxTikTok', active: true, regex: '^https?:\\\\/\\\\/(?:[a-z0-9-]+\\\\.)?tiktok\\\\.com\\\\/(.*)', replacement: 'https://vxtiktok.com/$1' },
-  { id: '3', name: 'Desviar Google Redirect', active: true, regex: '^https?:\\\\/\\\\/(?:www\\\\.)?google\\\\.[a-z.]+\\\\/url\\\\?.*q=([^&]+)', replacement: '$1', isDecode: true }
+  { id: '3', name: 'Desviar Google Redirect', active: true, regex: '^https?:\\\\/\\\\/(?:www\\\\.)?google\\\\.[a-z.]+\\\\/url\\\\?.*q=([^&]+)', replacement: '$1', isDecode: true },
+  { id: '4', name: 'Reddit ➔ Libreddit', active: true, regex: '^https?:\\\\/\\\\/(?:[a-z0-9-]+\\\\.)?reddit\\\\.com\\\\/(.*)', replacement: 'https://libreddit.spike.codes/$1' },
+  { id: '5', name: 'YouTube ➔ Invidious', active: false, regex: '^https?:\\\\/\\\\/(?:[a-z0-9-]+\\\\.)?youtube\\\\.com\\\\/(watch\\\\?v=.*)', replacement: 'https://yewtu.be/$1' },
+  { id: '6', name: 'Instagram ➔ DDInstagram', active: false, regex: '^https?:\\\\/\\\\/(?:[a-z0-9-]+\\\\.)?instagram\\\\.com\\\\/p\\\\/([^/]+)', replacement: 'https://ddinstagram.com/p/$1' }
 ];
 
 const DEFAULT_THREAT_CONFIGS: ThreatConfig[] = [
@@ -48,7 +53,12 @@ const DEFAULT_THREAT_CONFIGS: ThreatConfig[] = [
   { id: 'phishing', name: 'Tentativas de Phishing', description: 'Domínios não verificados que tentam imitar serviços e incluem caminhos como "login", "auth", "verify", "secure", "update".', enabled: true, priority: 'high' },
   { id: 'suspicious_domain', name: 'Domínios Suspeitos', description: 'Nomes de servidores com termos promocionais ou de isca como "win", "free", "gift", "update" ou com caracteres homóglifos.', enabled: true, priority: 'medium' },
   { id: 'unsecure_http', name: 'Protocolos Inseguros (HTTP)', description: 'Uso de links "http://" que transmitem dados em texto limpo sem criptografia TLS.', enabled: true, priority: 'medium' },
-  { id: 'tracking_heavy', name: 'Rastreadores em Excesso', description: 'Gera alertas quando a URL de destino contém mais do que 3 parâmetros de monitorização e tracking de dados.', enabled: true, priority: 'low' }
+  { id: 'tracking_heavy', name: 'Rastreadores em Excesso', description: 'Gera alertas quando a URL de destino contém mais do que 3 parâmetros de monitorização e tracking de dados.', enabled: true, priority: 'low' },
+  { id: 'url_shorteners', name: 'Encurtador de Links de Risco', description: 'Detecta se a URL usa um encurtador de link conhecido que oculta o destino final (ex: bit.ly, tinyurl.com, t.co, is.gd).', enabled: true, priority: 'medium' },
+  { id: 'raw_ips', name: 'Domínio de IP Bruto', description: 'Gera alertas quando o link usa um endereço IP numérico direto em vez de um nome de domínio tradicional (ex: http://192.168.1.5).', enabled: true, priority: 'high' },
+  { id: 'deep_subdomains', name: 'Subdomínios Excessivos/Aninhados', description: 'Gera alertas para domínios com subdomínios aninhados excessivos de phishing (ex: login.paypal.com-secure.web-auth.info).', enabled: true, priority: 'high' },
+  { id: 'suspicious_ports', name: 'Portas Não Standard', description: 'Detecta portas incomuns ou não seguras na URL que podem ocultar canais C2 ou serviços ilegítimos (ex: :8080, :8888, :1080).', enabled: true, priority: 'medium' },
+  { id: 'double_extensions', name: 'Simulação de Extensão Dupla', description: 'Detecta arquivos com extensões de arquivos em formato falso duplo projetadas para enganar utilizadores (ex: relatorio.pdf.exe).', enabled: true, priority: 'high' }
 ];
 
 export const useAppStore = create<AppState>()(
@@ -132,7 +142,14 @@ export const useAppStore = create<AppState>()(
       },
       updateAiConfig: (updates) => set((state) => ({
         aiConfig: { ...state.aiConfig, ...updates }
-      }))
+      })),
+
+      resetToDefaults: () => set({
+        rules: DEFAULT_RULES,
+        threatConfigs: DEFAULT_THREAT_CONFIGS,
+        securityAlerts: [],
+        savedLogs: []
+      })
     }),
     {
       name: 'urlguard-storage',

@@ -155,6 +155,82 @@ export function scanThreats(urlStr: string, configs: ThreatConfig[]): Omit<Secur
       }
     }
 
+    // 6. URL Shorteners
+    const shortenerConfig = configs.find(c => c.id === 'url_shorteners');
+    if (shortenerConfig && shortenerConfig.enabled) {
+      const shorteners = ['bit.ly', 'tinyurl.com', 't.co', 'is.gd', 'buff.ly', 'adf.ly', 'ouo.io', 'rebrand.ly', 'cutt.ly', 'tiny.cc', 'lnkd.in', 'shorte.st', 'v.gd', 'mcaf.ee', 'su.pr'];
+      const isShortener = shorteners.some(s => hostname === s || hostname.endsWith('.' + s));
+      if (isShortener) {
+        alerts.push({
+          threatId: 'url_shorteners',
+          threatName: shortenerConfig.name,
+          url: urlStr,
+          message: 'Esta URL usa um serviço de encurtamento que mascara o destino real do link. Tenha cautela ao prosseguir.',
+          priority: shortenerConfig.priority
+        });
+      }
+    }
+
+    // 7. Raw IP Domain
+    const rawIpConfig = configs.find(c => c.id === 'raw_ips');
+    if (rawIpConfig && rawIpConfig.enabled) {
+      const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+      if (ipRegex.test(hostname)) {
+        alerts.push({
+          threatId: 'raw_ips',
+          threatName: rawIpConfig.name,
+          url: urlStr,
+          message: 'Esta URL usa um endereço IP numérico direto em vez de um domínio registado, um indicador comum de servidores maliciosos ou phishing.',
+          priority: rawIpConfig.priority
+        });
+      }
+    }
+
+    // 8. Deep Nested Subdomains (Phishing)
+    const deepSubdomainConfig = configs.find(c => c.id === 'deep_subdomains');
+    if (deepSubdomainConfig && deepSubdomainConfig.enabled) {
+      const parts = hostname.replace('www.', '').split('.');
+      if (parts.length > 3) {
+        alerts.push({
+          threatId: 'deep_subdomains',
+          threatName: deepSubdomainConfig.name,
+          url: urlStr,
+          message: `Esta URL contém uma quantidade excessiva de subdomínios (${parts.length - 1}), frequentemente usados para imitar marcas famosas e ocultar domínios falsos.`,
+          priority: deepSubdomainConfig.priority
+        });
+      }
+    }
+
+    // 9. Suspicious Ports
+    const suspiciousPortsConfig = configs.find(c => c.id === 'suspicious_ports');
+    if (suspiciousPortsConfig && suspiciousPortsConfig.enabled) {
+      if (url.port && url.port !== '80' && url.port !== '443') {
+        alerts.push({
+          threatId: 'suspicious_ports',
+          threatName: suspiciousPortsConfig.name,
+          url: urlStr,
+          message: `Esta URL aponta para a porta não-padrão ":${url.port}", o que pode expor serviços de desenvolvimento vulneráveis ou servidores ilegítimos.`,
+          priority: suspiciousPortsConfig.priority
+        });
+      }
+    }
+
+    // 10. Double Extensions
+    const doubleExtensionsConfig = configs.find(c => c.id === 'double_extensions');
+    if (doubleExtensionsConfig && doubleExtensionsConfig.enabled) {
+      const doubleExtRegex = /\.(pdf|doc|docx|png|jpg|mp3|zip)\.(exe|bat|cmd|sh|scr|msi|apk|vbs|js|vbe)$/i;
+      if (doubleExtRegex.test(pathname)) {
+        const match = pathname.match(doubleExtRegex);
+        alerts.push({
+          threatId: 'double_extensions',
+          threatName: doubleExtensionsConfig.name,
+          url: urlStr,
+          message: `Extensão falsa detetada: o arquivo aparenta ser um "${match?.[1]}" mas na realidade é um executável perigoso "${match?.[2]}".`,
+          priority: doubleExtensionsConfig.priority
+        });
+      }
+    }
+
   } catch (e) {}
   return alerts;
 }

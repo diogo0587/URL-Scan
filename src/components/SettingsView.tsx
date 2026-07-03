@@ -11,10 +11,11 @@ export default function SettingsView() {
   const { 
     threatConfigs, updateThreatConfig, 
     securityAlerts, dismissSecurityAlert, clearSecurityAlerts,
-    addRule, setActiveView, aiConfig, updateAiConfig
+    addRule, setActiveView, aiConfig, updateAiConfig, resetToDefaults
   } = useAppStore();
 
   const [showApiKey, setShowApiKey] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Regex Builder State
   const [builderType, setBuilderType] = useState<'redirect' | 'param' | 'bypass'>('redirect');
@@ -613,6 +614,46 @@ export default function SettingsView() {
               <p className="text-slate-400 text-[10px] leading-normal">
                 Esta aplicação foi desenhada para correr de forma totalmente estática e independente. Toda a lógica de higienização de URLs, regras regex, e as requisições de Inteligência Artificial ocorrem **diretamente no seu navegador** via chamadas assíncronas seguras, sem depender de nenhum servidor intermediário próprio. Suas chaves de API nunca saem do seu cliente local.
               </p>
+            </div>
+
+            {/* Restore Defaults Module */}
+            <div className="bg-rose-950/5 border border-rose-900/20 rounded-2xl p-4 space-y-3">
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-rose-400 uppercase tracking-widest block">Restaurar Parâmetros Originais</span>
+                <p className="text-slate-400 text-[10px] leading-normal">
+                  Redefine todas as regras de privacidade padrão e os novos gatilhos de segurança inteligente avançada de fábrica (incluindo IP bruto, extensão falsa e encurtadores).
+                </p>
+              </div>
+              
+              {!showResetConfirm ? (
+                <button
+                  type="button"
+                  onClick={() => setShowResetConfirm(true)}
+                  className="py-2 px-4 bg-rose-950/40 hover:bg-rose-900/30 text-rose-400 border border-rose-500/10 rounded-xl text-xs font-bold transition duration-150"
+                >
+                  Restaurar Definições de Fábrica
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetToDefaults();
+                      setShowResetConfirm(false);
+                    }}
+                    className="py-1.5 px-3.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold transition"
+                  >
+                    Confirmar e Resetar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowResetConfirm(false)}
+                    className="py-1.5 px-3.5 bg-[#05060a] border border-slate-800 text-slate-400 hover:text-slate-200 rounded-lg text-xs font-semibold transition"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
